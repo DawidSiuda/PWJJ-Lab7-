@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.text.*?>
+<?import javafx.scene.effect.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.control.*?>
+<?import java.lang.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.layout.AnchorPane?>
+
+<Pane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="834.0" prefWidth="485.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="SOAPNode.Controler">
+   <children>
+      <Label fx:id="labelTitle" layoutX="126.0" layoutY="28.0" text="Node">
+         <font>
+            <Font size="24.0" />
+         </font>
+      </Label>
+      <Label fx:id="LabelValue1" layoutX="27.0" layoutY="83.0" prefHeight="21.0" prefWidth="107.0" text="Input port:">
+         <font>
+            <Font size="15.0" />
+         </font>
+      </Label>
+      <Label fx:id="LabelValue21" layoutX="219.0" layoutY="608.0" text="Logs">
+         <font>
+            <Font size="18.0" />
+         </font>
+      </Label>
+      <Label fx:id="labelInputPort" layoutX="102.0" layoutY="83.0" text="00">
+         <font>
+            <Font size="15.0" />
+         </font>s
+      </Label>
+      <Button fx:id="buttonSendMessage" layoutX="306.0" layoutY="355.0" mnemonicParsing="false" onAction="#buttonSendMessageClicked" prefHeight="68.0" prefWidth="150.0" text="Send message" />
+      <Separator layoutX="2.0" layoutY="440.0" prefHeight="5.0" prefWidth="479.0" />
+      <Label fx:id="labelNextNodePort" layoutX="436.0" layoutY="83.0" text="00">
+         <font>
+            <Font size="15.0" />
+         </font>
+      </Label>
+      <Label fx:id="LabelValue12" layoutX="324.0" layoutY="83.0" prefHeight="21.0" prefWidth="107.0" text="Next node port:">
+         <font>
+            <Font size="15.0" />
+         </font>
+      </Label>
+      <TextArea fx:id="textAreaWriteMessage" layoutX="28.0" layoutY="222.0" prefHeight="124.0" prefWidth="427.0" />
+      <ChoiceBox fx:id="choiceBoxUnicastBroadcast" layoutX="28.0" layoutY="357.0" prefHeight="25.0" prefWidth="266.0" />
+      <TextField fx:id="textFieldDestinationPort" layoutX="196.0" layoutY="397.0" prefHeight="25.0" prefWidth="97.0" />
+      <Label fx:id="LabelValue13" layoutX="20.0" layoutY="399.0" prefHeight="21.0" prefWidth="171.0" text="Port of destination host:">
+         <font>
+            <Font size="15.0" />
+         </font>
+      </Label>
+      <Separator layoutX="3.0" layoutY="207.0" prefHeight="5.0" prefWidth="473.0" />
+      <Label fx:id="LabelValue131" layoutX="32.0" layoutY="125.0" prefHeight="21.0" prefWidth="97.0" text="Set input port:">
+         <font>
+            <Font size="15.0" />
+         </font>
+      </Label>
+      <TextField fx:id="textFieldInputPort" layoutX="136.0" layoutY="123.0" prefHeight="25.0" prefWidth="50.0" />
+      <Label fx:id="LabelValue1311" layoutX="265.0" layoutY="125.0" prefHeight="21.0" prefWidth="129.0" text="Set next nodeport:">
+         <font>
+            <Font size="15.0" />
+         </font>
+      </Label>
+      <TextField fx:id="textFieldNextNodePort" layoutX="403.0" layoutY="123.0" prefHeight="25.0" prefWidth="50.0" />
+      <Button fx:id="buttonReloadInputPort" layoutX="28.0" layoutY="166.0" mnemonicParsing="false" onAction="#buttonReloadInputPortClicked" prefHeight="25.0" prefWidth="160.0" text="Reload input port" />
+      <Label fx:id="LabelValue211" layoutX="161.0" layoutY="445.0" text="Received messages" textAlignment="CENTER">
+         <font>
+            <Font size="18.0" />
+         </font>
+      </Label>
+      <ListView fx:id="listViewLogs" layoutX="23.0" layoutY="641.0" prefHeight="179.0" prefWidth="434.0" />
+      <Separator layoutX="3.0" layoutY="606.0" prefHeight="5.0" prefWidth="473.0" />
+      <TextArea fx:id="textAreaReceivedMessges" layoutX="24.0" layoutY="472.0" prefHeight="116.0" prefWidth="427.0" />
+      <Button fx:id="buttonReloadNextNodePort" layoutX="293.0" layoutY="166.0" mnemonicParsing="false" onAction="#buttonReloadNextNodePortClicked" prefHeight="25.0" prefWidth="160.0" text="Reload next node port" />
+   </children>
+</Pane>

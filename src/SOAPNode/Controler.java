@@ -1,15 +1,11 @@
 package SOAPNode;
 
-import javax.xml.ws.Endpoint;
-import javax.xml.ws.Service;
-
 import java.io.PrintStream;
 import java.net.Socket;
-import java.net.URL;
+
 import java.util.ArrayList;
 import java.util.List;
 
-import Interfaces.MessageInterface;
 import Interfaces.ReceiverInterface;
 import javafx.scene.control.Button;
 import javafx.scene.control.ChoiceBox;
@@ -18,14 +14,12 @@ import javafx.scene.control.ListView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 
-import javax.xml.namespace.QName;
 import javax.xml.soap.MessageFactory;
 import javax.xml.soap.Name;
 import javax.xml.soap.SOAPBody;
 import javax.xml.soap.SOAPBodyElement;
 import javax.xml.soap.SOAPElement;
 import javax.xml.soap.SOAPEnvelope;
-import javax.xml.soap.SOAPException;
 import javax.xml.soap.SOAPFactory;
 import javax.xml.soap.SOAPHeader;
 import javax.xml.soap.SOAPMessage;
@@ -61,64 +55,57 @@ public class Controler implements ReceiverInterface {
 	// ---------------- Variable ---------------------------------
 
 	List<String> listLogs;
-	int inputPort;
+	int thisAppPort;
 	int nextNodePort;
 
-	Endpoint endpoint;
-	Message message;
 	String address;
+
+	Receiver receiver;
 
 	String allMessages;
 
 	public Controler() {
+
 		// Set variables.
-		inputPort = 8093;
-		nextNodePort = 8094;
+		thisAppPort = 8190;
+
+		nextNodePort = thisAppPort;
 
 		allMessages = "";
-
-		endpoint = null;
 
 		listLogs = new ArrayList<String>();
 	}
 
 	public void destructor() {
-		if (endpoint != null) {
-			endpoint.stop();
+		receiver.endThread();
+		try {
+			log("INFO: Waiting for join receier thread.");
+			receiver.join();
+			log("INFO: Receier thread has been joined.");
+		} catch (Exception e) {
+			log("ERROR: Receiver thread throw exception while joining.");
+			return;
 		}
 	}
 
 	public void initialize() {
-		// ----------------Create endpoint --------------------------
 
-		message = new Message(this);
-		while (true) {
-			try {
-				address = "http://localhost:" + inputPort + "/Message";
-				endpoint = Endpoint.publish(address, message);
-			} catch (Exception e) {
-				log("Port " + inputPort + " is busy.");
-				inputPort--;
-				continue;
-			}
-			break;
-		}
+		// ---------------- Run receiver ----------------------------
 
-		// nextNodePort = inputPort + 1;
-		nextNodePort = inputPort;
-		log("Created endpoint at: " + address);
+		receiver = new Receiver(thisAppPort, this);
+		receiver.start();
 
 		// ---------------- Settings controls -----------------------
-		labelInputPort.setText(String.valueOf(inputPort));
+		labelInputPort.setText(String.valueOf(thisAppPort));
 		labelNextNodePort.setText(String.valueOf(nextNodePort));
 
-		textFieldInputPort.setText(String.valueOf(inputPort));
+		textFieldInputPort.setText(String.valueOf(thisAppPort));
 		textFieldNextNodePort.setText(String.valueOf(nextNodePort));
 
 		// ---------------- Send message controls -------------------
 		textAreaWriteMessage.setText("example message");
-		choiceBoxUnicastBroadcast.getItems().add("Broadcast                                                         ");
-		choiceBoxUnicastBroadcast.getItems().add("Unicast                                                           ");
+		choiceBoxUnicastBroadcast.getItems().add("Broadcast");
+		choiceBoxUnicastBroadcast.getItems().add("Unicast");
 		choiceBoxUnicastBroadcast.getSelectionModel().selectFirst();
 
 		// choiceBoxUnicastBroadcast.onActionProperty();
@@ -139,12 +126,26 @@ public class Controler implements ReceiverInterface {
 			return;
 		}
 
-		inputPort = port;
-		labelInputPort.setText(String.valueOf(inputPort));
-		textFieldInputPort.setText(String.valueOf(inputPort));
+		thisAppPort = port;
+		labelInputPort.setText(String.valueOf(thisAppPort));
+		textFieldInputPort.setText(String.valueOf(thisAppPort));
 
-		// TO DO
+		//
 		// Reload endpoint.
+		//
+		receiver.endThread();
+		try {
+			log("INFO: Waiting for join receier thread.");
+			receiver.join();
+			log("INFO: Receier thread has been joined.");
+		} catch (Exception e) {
+			log("ERROR: Receiver thread throw exception while joining.");
+			log("ERROR: New receiver thread has been not created.");
+			return;
+		}
+
+		receiver = new Receiver(thisAppPort, this);
+		receiver.start();
 
 		return;
 	}
@@ -166,81 +167,112 @@ public class Controler implements ReceiverInterface {
 	}
 
 	public void buttonSendMessageClicked() {
-		log("Sending message...");
+		String message = textAreaWriteMessage.getText();
+		String msgType = choiceBoxUnicastBroadcast.getSelectionModel().getSelectedItem();
 
+		int destinationPort = -1;
 		try {
-			SOAPMessage msg = createMessage("wiadomosc", String.valueOf(inputPort), String.valueOf(nextNodePort),
-					"uicast");
-			System.out.print(msg);
-
-
-			Socket socket = new Socket("127.0.0.1", nextNodePort);
-	        PrintStream out = new PrintStream(socket.getOutputStream(), true);
-	        msg.writeTo(out);
-	        out.close();
-
+			destinationPort = Integer.parseInt(textFieldDestinationPort.getText());
 		} catch (Exception e) {
-			log("Cannot create SOAP message.");
+			MyMessage.show("Wrong destination port.");
+			return;
 		}
 
-//		try {
-//			String urlString = "http://localhost:" + nextNodePort + "/Message?wsdl";
-//
-//			final Service messageService = Service.create(new URL(urlString),
-//					new QName("http://SOAPNode/wsdl", "MessageService"));
-//
-//			if (messageService == null) {
-//				log("Cannot read service from wsdl.");
-//				return;
-//			}
-//
-//			final MessageInterface message = messageService.getPort(new QName("http://SOAPNode/wsdl", "MessagePort"),
-//					MessageInterface.class);
-//
-//			String messageToSend = textAreaWriteMessage.getText();
-//			message.sentReceiveMessage(messageToSend);
-//
-//		} catch (Exception e) {
-//			log("Cannot send message.");
-//			MyMessage.show("Cannot send message.");
-//		}
-	}
+		log("INFO: Sending message from port " + thisAppPort + " to " + nextNodePort + " type: " + msgType);
+		sendMessage(message, thisAppPort, destinationPort, msgType);
 
-	@Override
-	public void receiveMessage(String msg) {
-		addNewMessage(msg);
 		return;
 	}
 
-	public static SOAPMessage createMessage(String text, String receiver, String sender, String msgType)
-			throws SOAPException {
+	@Override
+	public void receiveMessage(String msg, int sourcePort, int destinationPort, String msgType) {
 
-		MessageFactory messageFactory;
-		messageFactory = MessageFactory.newInstance();
-		SOAPMessage soapMessage = messageFactory.createMessage();
-		SOAPPart soapPart = soapMessage.getSOAPPart();
-		SOAPEnvelope soapEnvelope = soapPart.getEnvelope();
-		SOAPBody soapBody = soapEnvelope.getBody();
+		log("INFO: Received message from port " + destinationPort + " to " + destinationPort + " type: " +  msgType);
 
-		Name bodyName = SOAPFactory.newInstance().createName("msg");
-		SOAPBodyElement soapBodyElement = soapBody.addBodyElement(bodyName);
-		soapBodyElement.addTextNode(text);
+		if(sourcePort == -1 ||  destinationPort == -1) {
+			log("ERROR: Message is incorrect.");
+			return;
+		}
 
-		SOAPHeader header = soapEnvelope.getHeader();
 
-		Name receiverHeader = SOAPFactory.newInstance().createName("receiverId", "pre", "uri");
-		SOAPElement receiveElement = header.addChildElement(receiverHeader);
-		receiveElement.addTextNode(receiver);
+		if (sourcePort == thisAppPort) {
+			log("WARNING: Message back to sender.");
+			return;
+		} else if (msgType == "Broadcast") {
+			log("INFO: Received message from port: " + sourcePort + ".");
+			addNewMessage(msg);
 
-		Name senderHeader = SOAPFactory.newInstance().createName("senderId", "pre", "uri");
-		SOAPElement sendElement = header.addChildElement(senderHeader);
-		sendElement.addTextNode(sender);
+			sendMessage(msg, sourcePort, destinationPort, msgType);
+			addNewMessage(msg);
+		} else if (destinationPort == thisAppPort) {
+			log("INFO: Received message from port: " + sourcePort + ".");
+			addNewMessage(msg);
+		} else {
+			log("INFO: Message from port: " + sourcePort + " forwarded to the next node.");
+			sendMessage(msg, sourcePort, destinationPort, msgType);
+			addNewMessage(msg);
+		}
 
-		Name typeHeader = SOAPFactory.newInstance().createName("type", "pre", "uri");
-		SOAPElement typeElement = header.addChildElement(typeHeader);
-		typeElement.addTextNode(msgType);
+		return;
+	}
 
-		soapMessage.saveChanges();
+	public void sendMessage(String msg, int sourcePort, int destinationPort, String msgType) {
+
+		try {
+			SOAPMessage soapMessage = createMessage(msg, sourcePort, destinationPort, msgType);
+
+			if(soapMessage == null) {
+				return;
+			}
+
+			Socket socket = new Socket("127.0.0.1", nextNodePort);
+			PrintStream out = new PrintStream(socket.getOutputStream(), true);
+			soapMessage.writeTo(out);
+			out.close();
+			socket.close();
+
+		} catch (Exception e) {
+			log("ERROR: Cannot send message.");
+		}
+
+		return;
+	}
+
+	public SOAPMessage createMessage(String text, int sourcePort, int destinationPort, String msgType) {
+
+		SOAPMessage soapMessage = null;
+
+		try {
+			MessageFactory messageFactory;
+			messageFactory = MessageFactory.newInstance();
+			soapMessage = messageFactory.createMessage();
+			SOAPPart soapPart = soapMessage.getSOAPPart();
+			SOAPEnvelope soapEnvelope = soapPart.getEnvelope();
+			SOAPBody soapBody = soapEnvelope.getBody();
+
+			Name bodyName = SOAPFactory.newInstance().createName("msg");
+			SOAPBodyElement soapBodyElement = soapBody.addBodyElement(bodyName);
+			soapBodyElement.addTextNode(text);
+
+			SOAPHeader header = soapEnvelope.getHeader();
+
+			Name receiverHeader = SOAPFactory.newInstance().createName("destinationPort", "pre", "uri");
+			SOAPElement receiveElement = header.addChildElement(receiverHeader);
+			receiveElement.addTextNode(String.valueOf(destinationPort));
+
+			Name senderHeader = SOAPFactory.newInstance().createName("sourcePort", "pre", "uri");
+			SOAPElement sendElement = header.addChildElement(senderHeader);
+			sendElement.addTextNode(String.valueOf(sourcePort));
+
+			Name typeHeader = SOAPFactory.newInstance().createName("msgType", "pre", "uri");
+			SOAPElement typeElement = header.addChildElement(typeHeader);
+			typeElement.addTextNode(msgType);
+
+			soapMessage.saveChanges();
+		} catch (Exception e) {
+			log("ERROR: Cannot create SOAP message.");
+			return null;
+		}
 		return soapMessage;
 	}
 
@@ -252,5 +284,10 @@ public class Controler implements ReceiverInterface {
 	private void log(String str) {
 		listViewLogs.getItems().add(str);
 		System.out.println(str);
+	}
+
+	public void asyncLog(String str) {
+		//System.out.println(str);
+		log(str);
 	}
 }

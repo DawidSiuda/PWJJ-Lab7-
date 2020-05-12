@@ -2,14 +2,15 @@ package SOAPNode;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 
-import javax.xml.soap.SOAPException;
 import javax.xml.soap.SOAPMessage;
+
+import Interfaces.ReceiverInterface;
 
 import javax.xml.soap.*;
 
@@ -18,78 +19,102 @@ public class Receiver extends Thread {
 	public Socket socketAccept;
 	public static ServerSocket serverSocket;
 	private BufferedReader buffer;
-	public static Controller controller;
 
-	public Receiver(int port) {
+	ReceiverInterface receiverInterface;
+
+	public Receiver(int port, ReceiverInterface receiverInterface) {
 		this.servicePort = port;
+		this.receiverInterface = receiverInterface;
 	}
 
 	@Override
 	public void run() {
 		try {
-			serverSocket = new ServerSocket(servicePort);
+
+				try {
+					serverSocket = new ServerSocket(servicePort);
+					//break;
+				} catch (Exception e) {
+					receiverInterface.asyncLog("Cannot set receiver on port: " + servicePort);
+					return;
+				}
+
 			while (true) {
 				socketAccept = serverSocket.accept();
+
 				buffer = new BufferedReader(new InputStreamReader(socketAccept.getInputStream()));
-				if (!socketAccept.isClosed()) {
-					String msg, response;
-					response = buffer.readLine();
+
+				if (socketAccept.isClosed() == false) {
+					String msg;
+					String receivedXML;
+
+					receivedXML = buffer.readLine();
 
 					while ((msg = buffer.readLine()) != null) {
-						response += msg;
+						receivedXML += msg;
 					}
-//                 if (response != null) {
-//                     convertMessage(response);
-//                 }
+
+					if (receivedXML != null) {
+
+						parseXMLandSendToContrler(receivedXML);
+					}
 				}
 				buffer.close();
 			}
+		} catch (SocketException e) {
+			receiverInterface.asyncLog("INFO: End receiver thread.");
 		} catch (Exception e) {
-			// e.printStackTrace()
-			System.out.print("Receiver Error!!!");
+			receiverInterface.asyncLog("ERROR: Receiver Error!!!");
+			endThread();
 		}
 	}
 
-    public void convertMessage(String message) throws SOAPException, IOException {
+	public Boolean parseXMLandSendToContrler(String message) {
 
-    	MessageFactory messageFactory = MessageFactory.newInstance();
+		String text;
+		int sourcePort;
+		int destinationPort;
+		String type;
 
-        InputStream is = new ByteArrayInputStream(message.getBytes());
-        SOAPMessage soapMessage = messageFactory.createMessage(null, is);
+		try {
+			MessageFactory messageFactory = MessageFactory.newInstance();
 
-        SOAPHeader header = soapMessage.getSOAPPart().getEnvelope().getHeader();
-        SOAPBody body = soapMessage.getSOAPPart().getEnvelope().getBody();
-        Node receiveInfo = (Node) header.getElementsByTagNameNS("uri", "receiverId").item(0);
-        String receiver = receiveInfo.getFirstChild().getTextContent();
+			InputStream is = new ByteArrayInputStream(message.getBytes());
+			SOAPMessage soapMessage = messageFactory.createMessage(null, is);
 
-        Node sendInfo = (Node) header.getElementsByTagNameNS("uri", "senderId").item(0);
-        String sender = sendInfo.getFirstChild().getTextContent();
+			SOAPHeader header = soapMessage.getSOAPPart().getEnvelope().getHeader();
+			SOAPBody body = soapMessage.getSOAPPart().getEnvelope().getBody();
+			Node receiveInfo = (Node) header.getElementsByTagNameNS("uri", "destinationPort").item(0);
+			destinationPort = Integer.parseInt(receiveInfo.getFirstChild().getTextContent());
 
-        Node typeInfo = (Node) header.getElementsByTagNameNS("uri", "type").item(0);
-        String type = typeInfo.getFirstChild().getTextContent();
+			Node sendInfo = (Node) header.getElementsByTagNameNS("uri", "sourcePort").item(0);
+			sourcePort = Integer.parseInt(sendInfo.getFirstChild().getTextContent());
 
-        Node msg = (Node) body.getElementsByTagName("msg").item(0);
-        String messageFromXML = msg.getFirstChild().getTextContent();
+			Node typeInfo = (Node) header.getElementsByTagNameNS("uri", "msgType").item(0);
+			type = typeInfo.getFirstChild().getTextContent();
 
-        // ---------------------------------------------------------------
+			Node msg = (Node) body.getElementsByTagName("msg").item(0);
+			text = msg.getFirstChild().getTextContent();
 
-        if(receiver.equals(port))
-        {
-            controller.receive.setText(messageFromXML);
-            controller.showLog("Otrzymano wiadomość od " + sender);
-            controller.showMessage(sender + ": " + messageFromXML);
-        }  else if (!sender.equals(port)) {
-            send(handl.getSoapMessage());
-            controller.showLog("Przekazano wiadomość od " + sender + " do " + receiver);
-        }
-         if (type.equals("Broadcast") && !sender.equals(port)) {
-                controller.receive.setText(msg);
-                controller.showLog("Otrzymano wiadomość od " + sender);
-                controller.showMessage(sender + ": " + messageFromXML);
-                if(!nextPort.equals(sender)) {
-                    send(handl.getSoapMessage());
-                }
-            }
-    }
+			receiverInterface.receiveMessage(text, sourcePort, destinationPort, type);
 
+		} catch (Exception e) {
+			receiverInterface.asyncLog("ERROR: Cannot parse received XML message");
+			return false;
+		}
+
+		return true;
+	}
+
+	public void endThread() {
+		if (serverSocket != null) {
+			try {
+				receiverInterface.asyncLog("INFO: Going to close receiver socket.");
+				serverSocket.close();
+				receiverInterface.asyncLog("INFO: Sent close socket request.");
+			} catch (Exception e) {
+				receiverInterface.asyncLog("ERROR: Cannot close socket.");
+			}
+		}
+	}
 }

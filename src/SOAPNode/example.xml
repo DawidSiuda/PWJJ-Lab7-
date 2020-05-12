@@ -1,0 +1,1 @@
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/"><SOAP-ENV:Header><pre:receiverId xmlns:pre="uri">8092</pre:receiverId><pre:senderId xmlns:pre="uri">8092</pre:senderId><pre:type xmlns:pre="uri">uicast</pre:type></SOAP-ENV:Header><SOAP-ENV:Body><msg>wiadomosc</msg></SOAP-ENV:Body></SOAP-ENV:Envelope>

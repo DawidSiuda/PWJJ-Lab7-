@@ -187,30 +187,29 @@ public class Controler implements ReceiverInterface {
 	@Override
 	public void receiveMessage(String msg, int sourcePort, int destinationPort, String msgType) {
 
-		log("INFO: Received message from port " + destinationPort + " to " + destinationPort + " type: " +  msgType);
+		log("INFO: Received message from port " + destinationPort + " to " + destinationPort + " type: " + msgType);
 
-		if(sourcePort == -1 ||  destinationPort == -1) {
+		if (sourcePort == -1 || destinationPort == -1) {
 			log("ERROR: Message is incorrect.");
 			return;
 		}
 
-
-		if (sourcePort == thisAppPort) {
-			log("WARNING: Message back to sender.");
-			return;
-		} else if (msgType == "Broadcast") {
+		if (msgType.equals("Broadcast") == true) {
 			log("INFO: Received message from port: " + sourcePort + ".");
 			addNewMessage(msg);
 
-			sendMessage(msg, sourcePort, destinationPort, msgType);
-			addNewMessage(msg);
+			if (sourcePort != thisAppPort) {
+				sendMessage(msg, sourcePort, destinationPort, msgType);
+			}
 		} else if (destinationPort == thisAppPort) {
 			log("INFO: Received message from port: " + sourcePort + ".");
 			addNewMessage(msg);
+		} else if (sourcePort == thisAppPort) {
+			log("WARNING: Message back to sender.");
+			return;
 		} else {
 			log("INFO: Message from port: " + sourcePort + " forwarded to the next node.");
 			sendMessage(msg, sourcePort, destinationPort, msgType);
-			addNewMessage(msg);
 		}
 
 		return;
@@ -221,7 +220,7 @@ public class Controler implements ReceiverInterface {
 		try {
 			SOAPMessage soapMessage = createMessage(msg, sourcePort, destinationPort, msgType);
 
-			if(soapMessage == null) {
+			if (soapMessage == null) {
 				return;
 			}
 
@@ -287,7 +286,7 @@ public class Controler implements ReceiverInterface {
 	}
 
 	public void asyncLog(String str) {
-		//System.out.println(str);
+		// System.out.println(str);
 		log(str);
 	}
 }
